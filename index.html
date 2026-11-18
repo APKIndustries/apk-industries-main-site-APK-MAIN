@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090b12">
+  <meta name="description" content="APK INDUSTRIES creates cinematic 3D models, automotive concepts, logos, AI experiences and interactive digital products.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>APK INDUSTRIES — 3D, AI &amp; Digital Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+  <style>
+    :root {
+      --ink: #f7f8fb;
+      --muted: #9da8bd;
+      --panel: rgba(13, 17, 29, 0.72);
+      --panel-solid: #101421;
+      --line: rgba(255, 255, 255, 0.09);
+      --blue: #697eff;
+      --violet: #9a66ff;
+      --cyan: #53d3ff;
+      --pink: #e66ca8;
+      --green: #63ddb7;
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 78% 12%, rgba(98, 89, 255, 0.12), transparent 28rem),
+        radial-gradient(circle at 20% 62%, rgba(54, 186, 255, 0.06), transparent 25rem),
+        #090b12;
+      font-family: "Manrope", sans-serif;
+      transition: background 0.35s, color 0.35s;
+    }
+    body.light {
+      --ink: #10131c;
+      --muted: #677187;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-solid: #f7f8fc;
+      --line: rgba(15, 23, 42, 0.10);
+      background:
+        radial-gradient(circle at 78% 12%, rgba(98, 89, 255, 0.12), transparent 28rem),
+        radial-gradient(circle at 20% 62%, rgba(54, 186, 255, 0.08), transparent 25rem),
+        #f7f8fc;
+    }
+    button, input, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+
+    .model-canvas { position:absolute;inset:0;z-index:3;width:100%;height:100%;display:block;pointer-events:none; }
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    }
+
+    .shell {
+      position: relative;
+      z-index: 2;
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: fixed;
+      z-index: 20;
+      top: 18px;
+      left: 50%;
+      width: min(1180px, calc(100% - 40px));
+      height: 68px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px 8px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(24px) saturate(140%);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(135deg, var(--blue), var(--violet));
+      box-shadow: 0 10px 24px rgba(105, 126, 255, 0.28);
+      font-family: "DM Mono", monospace;
+    }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .nav-links a:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .menu-toggle { display: none; }
+    .icon-btn, .profile-btn, .cta {
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: rgba(255,255,255,.055);
+    }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+    }
+    .profile-btn {
+      height: 42px;
+      max-width: 180px;
+      border-radius: 12px;
+      padding: 0 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .3px;
+    }
+
+    .hero {
+      min-height: 760px;
+      height: 100vh;
+      max-height: 920px;
+      display: flex;
+      align-items: center;
+      padding-top: 100px;
+    }
+    .hero-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.02fr .98fr;
+      align-items: center;
+      gap: 40px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--cyan);
+      border: 1px solid rgba(83, 211, 255, 0.18);
+      background: rgba(83, 211, 255, 0.06);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+    .eyebrow-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 14px var(--green);
+    }
+    .hero h1 {
+      max-width: 700px;
+      margin: 22px 0 18px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(58px, 7.2vw, 112px);
+      line-height: .88;
+      letter-spacing: -6px;
+    }
+    .hero h1 span {
+      display: block;
+      color: transparent;
+      background: linear-gradient(100deg, #f7f8fb 8%, #8b9cff 58%, #d88cf2 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    body.light .hero h1 span { background-image: linear-gradient(100deg, #11131a 8%, #566adf 58%, #9c50c1 100%); }
+    body.light .showcase-card { background:rgba(255,255,255,.48); }
+    .hero-copy {
+      max-width: 580px;
+      margin: 0 0 30px;
+      color: var(--muted);
+      font-size: clamp(16px, 1.5vw, 19px);
+      line-height: 1.72;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .cta {
+      height: 52px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 20px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform .2s, border-color .2s, background .2s;
+    }
+    .cta-primary {
+      border: 0;
+      color: white;
+      background: linear-gradient(135deg, var(--blue), #825cf1);
+      box-shadow: 0 16px 38px rgba(105,126,255,.28);
+    }
+    .cta:hover { transform: translateY(-3px); border-color: rgba(105,126,255,.55); }
+
+    .showcase {
+      min-height: 560px;
+      position: relative;
+      perspective: 1200px;
+    }
+    .showcase-card {
+      position: absolute;
+      inset: 38px 0 20px 30px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.10), transparent 42%),
+        rgba(13,17,29,.48);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 40px 100px rgba(0,0,0,.35);
+      transform: rotateY(-8deg) rotateX(3deg);
+      transform-style: preserve-3d;
+      overflow: hidden;
+    }
+    .showcase-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 58% 44%, rgba(108, 126, 255, .28), transparent 15rem),
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: auto, 34px 34px, 34px 34px;
+    }
+    .showcase-bar {
+      position: absolute;
+      z-index: 3;
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .model-orbit {
+      position: absolute;
+      z-index: 2;
+      width: 260px;
+      height: 260px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -46%);
+      border: 1px solid rgba(138,152,255,.22);
+      border-radius: 50%;
+      animation: orbitSpin 18s linear infinite;
+    }
+    .model-orbit::before, .model-orbit::after {
+      content: "";
+      position: absolute;
+      inset: 28px -30px;
+      border: 1px solid rgba(129,188,255,.16);
+      border-radius: 50%;
+      transform: rotate(58deg);
+    }
+    .model-orbit::after { transform: rotate(-58deg); }
+    .model-core {
+      position: absolute;
+      z-index: 4;
+      left: 50%;
+      top: 50%;
+      width: 170px;
+      height: 170px;
+      transform: translate(-50%, -50%) rotate(-12deg);
+      border-radius: 48px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.35), transparent 24%),
+        linear-gradient(135deg, #697eff 0%, #9a66ff 48%, #4ed8ff 100%);
+      box-shadow: inset -18px -20px 40px rgba(43,36,122,.5), 0 34px 60px rgba(72,76,180,.38);
+      animation: coreFloat 5s ease-in-out infinite;
+    }
+    .model-core::before {
+      content: "APK";
+      position: absolute;
+      inset: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 50%;
+      color: white;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 35px;
+      font-weight: 700;
+      box-shadow: inset 0 0 24px rgba(255,255,255,.12);
+    }
+    .model-core[data-model="orb"] {
+      width:180px;height:180px;border-radius:50%;
+      background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.8),transparent 8%),linear-gradient(135deg,#697eff,#9a66ff 55%,#53d3ff);
+      box-shadow:inset -18px -18px 34px rgba(43,36,122,.45),0 0 42px rgba(83,211,255,.38);
+    }
+    .model-core[data-model="orb"]::before { content:"";inset:20px;border-radius:50%;border:1px solid rgba(255,255,255,.5); }
+    .model-core[data-model="vehicle"] {
+      width:220px;height:90px;top:52%;border-radius:68% 30% 20% 28%;
+      background:linear-gradient(145deg,rgba(255,255,255,.5),transparent 20%),linear-gradient(135deg,#697eff,#373d77 55%,#53d3ff);
+      box-shadow:inset -8px -15px 24px rgba(43,36,122,.55),0 28px 42px rgba(72,76,180,.38);
+    }
+    .model-core[data-model="vehicle"]::before {
+      content:"";inset:auto 25px -20px;height:36px;border-radius:99px;
+      border:8px solid #171c32;background:linear-gradient(90deg,#697eff,#53d3ff);
+    }
+    .model-core[data-material="gold"] { background:linear-gradient(145deg,#fff1ad,transparent 24%),linear-gradient(135deg,#d9b25d,#835827 58%,#fff0bd); }
+    .model-core[data-material="gold"]::before { color:#fff1bd;border-color:rgba(255,241,189,.5); }
+    .model-core[data-material="chrome"] { background:linear-gradient(145deg,#fff,transparent 25%),linear-gradient(135deg,#dce7f1,#526276 50%,#f4f8ff); }
+    .model-core[data-material="chrome"]::before { color:#fff;border-color:rgba(255,255,255,.65); }
+    body.webgl-model-ready .model-core { visibility:hidden; }
+    .model-floor {
+      position: absolute;
+      z-index: 1;
+      left: 8%;
+      right: 8%;
+      bottom: 16px;
+      height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(105,126,255,.35), transparent 68%);
+      filter: blur(5px);
+    }
+    .floating-tag {
+      position: absolute;
+      z-index: 6;
+      right: 18px;
+      top: 48px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(9,11,18,.78);
+      color: #fff;
+      font-size: 11px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+    }
+    .viewer-controls {
+      position: absolute;
+      z-index: 7;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .viewer-control-group { display: flex; flex-direction: column; gap: 7px; }
+    .viewer-control-label {
+      padding-left: 3px;
+      color: var(--muted);
+      font: 9px "DM Mono", monospace;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+    }
+    .viewer-options { display: flex; gap: 6px; flex-wrap: wrap; }
+    .viewer-chip {
+      min-height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--muted);
+      background: rgba(9,11,18,.78);
+      font-size: 10px;
+      font-weight: 700;
+      backdrop-filter: blur(12px);
+      transition: .2s;
+    }
+    .viewer-chip[aria-pressed="true"], .viewer-chip:hover {
+      border-color: rgba(105,126,255,.8);
+      color: #fff;
+      background: rgba(75,86,180,.72);
+    }
+    .viewer-chip.material-gold[aria-pressed="true"] { border-color: #e6c576; background: rgba(142,105,42,.75); }
+    .viewer-chip.material-chrome[aria-pressed="true"] { border-color: #d3e2f1; background: rgba(96,118,138,.78); }
+    .viewer-tools { display: flex; gap: 6px; }
+    .viewer-tool {
+      width: 34px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #fff;
+      background: rgba(9,11,18,.78);
+      font-size: 12px;
+    }
+    .viewer-tool[aria-pressed="false"] { color: var(--cyan); }
+    @keyframes coreFloat { 50% { transform: translate(-50%, -58%) rotate(-4deg); } }
+    @keyframes orbitSpin { to { transform: translate(-50%, -46%) rotate(360deg); } }
+
+    section.content-section { padding: 110px 0; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    .section-kicker { color: var(--cyan); font-family:"DM Mono", monospace; font-size:11px; text-transform:uppercase; letter-spacing:.8px; }
+    .section-head h2 {
+      margin: 9px 0 0;
+      font-family:"Space Grotesk",sans-serif;
+      font-size:clamp(38px,5vw,62px);
+      line-height:1;
+      letter-spacing:-3px;
+    }
+    .section-head p { max-width:420px; color:var(--muted); line-height:1.7; }
+
+    .work-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+    .project-card {
+      grid-column: span 4;
+      min-height: 380px;
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:var(--panel);
+      padding:24px;
+      width:100%;
+      color:var(--ink);
+      text-align:left;
+      font-family:inherit;
+      transition:transform .35s cubic-bezier(.16,1,.3,1), border-color .35s;
+    }
+    .project-card.featured { grid-column:span 8; }
+    .project-card:hover { transform:translateY(-8px); border-color:rgba(105,126,255,.5); }
+    .project-card h3 { margin:14px 0 8px; font-family:"Space Grotesk"; font-size:24px; }
+    .project-card p { margin:0; color:var(--muted); line-height:1.65; }
+    .project-art { height:250px; margin:-24px -24px 18px; position:relative; overflow:hidden; }
+    .project-card.featured .project-art { height:270px; }
+    .art-one { background:radial-gradient(circle at 62% 45%,#9a66ff 0 8%,transparent 9%),linear-gradient(135deg,#10152e,#5829a7 58%,#182d63); }
+    .art-one::after {
+      content:"";
+      position:absolute; width:190px;height:190px;right:12%;top:34px;border:28px solid rgba(255,255,255,.15);
+      border-radius:48px;transform:rotate(24deg);box-shadow:0 25px 50px rgba(0,0,0,.35);
+    }
+    .art-two { background:radial-gradient(circle at 50% 100%,#53d3ff,transparent 38%),linear-gradient(145deg,#171821,#2a3150); }
+    .art-two::after { content:"A"; position:absolute;left:50%;top:52%;transform:translate(-50%,-50%) rotate(-8deg);font:800 130px "Space Grotesk";color:#f2f5ff;text-shadow:16px 18px 0 #697eff,28px 30px 0 rgba(105,126,255,.28); }
+    .art-three { background:linear-gradient(145deg,#121929,#1f4c67); }
+    .art-three::after { content:"";position:absolute;width:260px;height:80px;left:50%;top:52%;transform:translate(-50%,-50%) skewX(-18deg);border-radius:70% 30% 20% 40%;background:linear-gradient(135deg,#e9efff,#697eff 38%,#22283e 39%,#53d3ff);box-shadow:0 30px 38px rgba(0,0,0,.5); }
+    .project-meta { display:flex;justify-content:space-between;align-items:center;margin-top:18px;color:var(--muted);font-family:"DM Mono";font-size:10px;text-transform:uppercase; }
+    .project-arrow { width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%; }
+
+    .project-modal {
+      position:fixed;
+      z-index:3000;
+      inset:0;
+      display:none;
+      place-items:center;
+      padding:20px;
+      background:rgba(3,5,10,.72);
+      backdrop-filter:blur(18px);
+    }
+    .project-modal.open { display:grid; }
+    .modal-panel {
+      width:min(720px,100%);
+      max-height:min(680px,calc(100vh - 40px));
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:28px;
+      background:var(--panel-solid);
+      box-shadow:0 40px 100px rgba(0,0,0,.48);
+    }
+    .modal-art { height:280px;border-radius:27px 27px 0 0; }
+    .modal-copy { padding:28px; }
+    .modal-copy h3 { margin:8px 0;font-family:"Space Grotesk";font-size:34px; }
+    .modal-copy p { color:var(--muted);line-height:1.7; }
+    .modal-close {
+      position:absolute;
+      top:16px;
+      right:16px;
+      width:42px;
+      height:42px;
+      border:1px solid var(--line);
+      border-radius:50%;
+      color:white;
+      background:rgba(9,11,18,.78);
+      font-size:18px;
+    }
+    .modal-meta { display:flex;flex-wrap:wrap;gap:8px;margin-top:20px; }
+    .modal-meta span { border:1px solid var(--line);border-radius:999px;padding:8px 10px;color:var(--muted);font-family:"DM Mono";font-size:10px; }
+    .scroll-progress {
+      position:fixed;z-index:30;top:0;left:0;width:100%;height:3px;
+      background:linear-gradient(90deg,var(--blue),var(--cyan),var(--violet));
+      transform:scaleX(0);transform-origin:left;pointer-events:none;
+    }
+    .reveal { opacity:0;transform:translateY(22px);transition:opacity .65s ease,transform .65s cubic-bezier(.16,1,.3,1); }
+    .reveal.is-visible { opacity:1;transform:translateY(0); }
+
+    .services { display:grid;grid-template-columns:repeat(4,1fr);gap:14px; }
+    .service {
+      min-height:220px;border:1px solid var(--line);border-radius:20px;padding:22px;background:var(--panel);
+      transition:.3s;
+    }
+    .service:hover { background:rgba(105,126,255,.08); transform:translateY(-5px); }
+    .service-number { color:var(--cyan);font-family:"DM Mono";font-size:11px; }
+    .service h3 { margin:55px 0 8px;font-family:"Space Grotesk";font-size:20px; }
+    .service p { margin:0;color:var(--muted);font-size:13px;line-height:1.65; }
+
+    .founder {
+      display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;
+      border:1px solid var(--line);border-radius:30px;padding:16px;background:var(--panel);
+    }
+    .founder-visual {
+      min-height:390px;border-radius:22px;position:relative;overflow:hidden;
+      background:radial-gradient(circle at 70% 38%,rgba(83,211,255,.24),transparent 11rem),linear-gradient(145deg,#171c32,#0a0c13);
+    }
+    .founder-visual::before {
+      content:"APK";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-8deg);
+      font:700 118px "Space Grotesk";letter-spacing:-10px;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.32);
+    }
+    .founder-copy { display:flex;flex-direction:column;justify-content:center;padding:38px; }
+    .founder-copy blockquote { margin:18px 0 28px;font-family:"Space Grotesk";font-size:clamp(28px,4vw,44px);line-height:1.12;letter-spacing:-2px; }
+    .founder-copy p { color:var(--muted);line-height:1.7; }
+
+    footer { padding:30px 0 50px;border-top:1px solid var(--line);color:var(--muted);font-size:12px; }
+    .footer-row { display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap; }
+
+    #onboarding {
+      position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;
+      padding:24px;color:#10131c;background:#f7f8fc;
+      transition:transform .65s cubic-bezier(.16,1,.3,1),opacity .45s;
+    }
+    #onboarding.dismissed { transform:translateY(-105%);opacity:0;pointer-events:none; }
+    .wizard-head { width:min(780px,100%);margin:0 auto;display:flex;align-items:center;justify-content:space-between; }
+    .wizard-brand { display:flex;align-items:center;gap:9px;font-family:"Space Grotesk";font-weight:700; }
+    .wizard-brand-mark { width:34px;height:34px;display:grid;place-items:center;border-radius:10px;color:#fff;background:#697eff;font-family:"DM Mono"; }
+    .wizard-progress { width:min(440px,100%);height:4px;margin:14px auto 0;border-radius:20px;background:#e4e7ef;overflow:hidden; }
+    .wizard-progress div { height:100%;width:20%;background:#697eff;transition:width .4s cubic-bezier(.16,1,.3,1); }
+    .wizard-stage { flex:1;display:flex;align-items:center;justify-content:center;width:min(760px,100%);margin:0 auto; }
+    .wizard-slide { display:none;width:100%;text-align:center;animation:slideIn .38s ease; }
+    .wizard-slide.active { display:block; }
+    @keyframes slideIn { from { opacity:0;transform:translateX(24px); } }
+    .wizard-slide h1 { margin:18px 0 8px;font-family:"Space Grotesk";font-size:clamp(32px,5vw,48px);letter-spacing:-2px; }
+    .wizard-slide p { max-width:560px;margin:0 auto 26px;color:#697187;line-height:1.6; }
+    .wizard-orb { width:86px;height:86px;margin:0 auto 8px;display:grid;place-items:center;border-radius:26px;color:#fff;background:linear-gradient(135deg,#697eff,#9a66ff 60%,#53d3ff);font:700 22px "Space Grotesk";box-shadow:0 18px 44px rgba(105,126,255,.28);transform:rotate(-8deg); }
+    .choice-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:650px;margin:0 auto; }
+    .choice-grid.two { grid-template-columns:repeat(2,1fr); }
+    .choice {
+      min-height:150px;border:2px solid #edf0f5;border-radius:18px;padding:18px;background:#fff;color:#10131c;
+      transition:.2s;
+    }
+    .choice:hover { transform:translateY(-3px);border-color:#ccd4ff; }
+    .choice.selected { border-color:#697eff;background:#f3f5ff;box-shadow:0 12px 26px rgba(105,126,255,.12); }
+    .choice-icon { display:block;font-size:36px;margin-bottom:12px; }
+    .choice strong { display:block;font-size:14px; }
+    .profile-form { max-width:560px;margin:auto;display:grid;gap:12px;text-align:left; }
+    .profile-form label { font-size:12px;font-weight:800;color:#3d465a; }
+    .profile-form input {
+      width:100%;height:50px;border:1px solid #dde2ec;border-radius:12px;padding:0 14px;color:#10131c;background:#fff;
+    }
+    .privacy-box { max-width:620px;margin:auto;text-align:left;border:1px solid #e4e7ef;border-radius:18px;padding:18px;background:#fff; }
+    .privacy-row { display:flex;gap:12px;padding:8px 0;color:#536078;line-height:1.5; }
+    .privacy-row strong { color:#10131c; }
+    .consent { display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px;font-weight:700; }
+    .wizard-footer { width:min(560px,100%);margin:0 auto;display:flex;justify-content:center;gap:12px; }
+    .wizard-btn { height:50px;border:0;border-radius:12px;padding:0 22px;font-weight:800; }
+    .wizard-next { min-width:210px;color:#fff;background:#697eff;box-shadow:0 12px 28px rgba(105,126,255,.24); }
+    .wizard-back { color:#697187;background:transparent;border:1px solid #dde2ec; }
+    .wizard-back.hidden { visibility:hidden; }
+    .wizard-skip { display:none;border:0;background:transparent;color:#697187;font-weight:700; }
+
+    .toast {
+      position:fixed;z-index:2000;left:50%;bottom:24px;transform:translate(-50%,30px);
+      max-width:min(520px,calc(100% - 30px));padding:12px 16px;border:1px solid var(--line);border-radius:12px;
+      background:#111727;color:#fff;box-shadow:0 16px 40px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.25s;
+    }
+    .toast.show { opacity:1;transform:translate(-50%,0); }
+
+    @media (max-width: 980px) {
+      .menu-toggle { display:grid; }
+      .nav-links {
+        position:absolute;top:calc(100% + 10px);left:0;right:0;
+        display:none;flex-direction:column;align-items:stretch;gap:4px;
+        padding:10px;border:1px solid var(--line);border-radius:16px;
+        background:var(--panel-solid);box-shadow:0 20px 50px rgba(0,0,0,.25);
+      }
+      .nav-links.open { display:flex; }
+      .nav-links a { padding:13px;border-radius:10px; }
+      .hero { height:auto;max-height:none;padding:150px 0 80px; }
+      .hero-grid { grid-template-columns:1fr; }
+      .showcase { min-height:460px; }
+      .showcase-card { inset:20px 5%; }
+      .project-card,.project-card.featured { grid-column:span 6; }
+      .services { grid-template-columns:repeat(2,1fr); }
+      .founder { grid-template-columns:1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell,.nav { width:calc(100% - 24px); }
+      .nav { height:62px;top:12px;padding-left:10px; }
+      .brand span { display:none; }
+      .profile-btn { max-width:112px; }
+      .hero { padding-top:120px; }
+      .hero h1 { letter-spacing:-4px; }
+      .hero-grid { gap:20px; }
+      .showcase { min-height:380px; }
+      .showcase-card { inset:10px 0; }
+      .model-orbit { width:210px;height:210px; }
+      .model-core { width:140px;height:140px; }
+      .model-core::before { inset:32px;font-size:28px; }
+      .showcase-bar { font-size:8px; }
+      .floating-tag { top:44px;right:12px;padding:8px;font-size:9px; }
+      .viewer-controls { left:10px;right:10px;bottom:10px;align-items:start;flex-direction:column;gap:7px; }
+      .viewer-control-group { gap:4px; }
+      .viewer-chip { min-height:28px;padding:0 8px;font-size:9px; }
+      .viewer-tool { height:28px; }
+      section.content-section { padding:70px 0; }
+      .section-head { align-items:start;flex-direction:column; }
+      .project-card,.project-card.featured { grid-column:span 12; }
+      .services { grid-template-columns:1fr; }
+      .service { min-height:180px; }
+      .service h3 { margin-top:35px; }
+      .founder-copy { padding:24px; }
+      .choice-grid,.choice-grid.two { grid-template-columns:1fr; }
+      .choice { min-height:92px;display:flex;align-items:center;gap:14px;text-align:left;padding:14px; }
+      .choice-icon { margin:0;font-size:28px; }
+      .wizard-stage { align-items:flex-start;padding-top:38px;overflow-y:auto; }
+      #onboarding { padding:16px 12px 20px; }
+      .wizard-footer { position:sticky;bottom:0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior:auto; }
+      *,*::before,*::after { animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+  <div class="noise" aria-hidden="true"></div>
+
+  <div id="onboarding" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+    <div class="wizard-head">
+      <button class="wizard-back hidden" id="wizardBack" type="button">← Back</button>
+      <div class="wizard-brand"><div class="wizard-brand-mark">A</div>APK INDUSTRIES</div>
+      <span id="wizardStep" style="font-family:'DM Mono';font-size:12px;color:#697187">1 / 5</span>
+    </div>
+    <div class="wizard-progress"><div id="wizardProgress"></div></div>
+
+    <div class="wizard-stage">
+      <div class="wizard-slide active" data-slide="1">
+        <div class="wizard-orb">3D</div>
+        <h1 id="wizardTitle">What are you here to create?</h1>
+        <p>Choose your focus and we will personalize the APK INDUSTRIES studio.</p>
+        <div class="choice-grid">
+          <button class="choice selected" type="button" data-purpose="3D Models"><span class="choice-icon">🧊</span><strong>3D Models</strong></button>
+          <button class="choice" type="button" data-purpose="Logos & Branding"><span class="choice-icon">✦</span><strong>Logos &amp; Branding</strong></button>
+          <button class="choice" type="button" data-purpose="Cars & Concepts"><span class="choice-icon">🏎️</span><strong>Cars &amp; Concepts</strong></button>
+        </div>
+      </div>
+
+      <div class="wizard-slide" data-slide="2">
+        <h1>Choose a project scale</h1>
+        <p>This helps APK INDUSTRIES suggest the right service and starting format.</p>
+        <div class="choice-grid two">
+          <button class="choice selected" type="button" data-scale="Concept / Personal"><span class="choice-icon">◎</span><strong>Concept / Personal</strong></button>
+          <button class="choice" type="button" data-scale="Business / Brand"><span class="choice-icon">◆</span><strong>Business / Brand</strong></button>
+        </div>
+      </div>
+
+      <div class="wizard-slide" data-slide="3">
+        <h1>How did you discover us?</h1>
+        <p>Optional, but useful for understanding the APK INDUSTRIES community.</p>
+        <div class="choice-grid two">
+          <button class="choice selected" type="button" data-source="YouTube"><span class="choice-icon">▶️</span><strong>YouTube</strong></button>
+          <button class="choice" type="button" data-source="Instagram / Social"><span class="choice-icon">📸</span><strong>Instagram / Social</strong></button>
+          <button class="choice" type="button" data-source="Google"><span class="choice-icon">🔎</span><strong>Google Search</strong></button>
+          <button class="choice" type="button" data-source="Friend / Community"><span class="choice-icon">🤝</span><strong>Friend / Community</strong></button>
+        </div>
+      </div>
+
+      <div class="wizard-slide" data-slide="4">
+        <h1>Privacy &amp; Studio Preferences</h1>
+        <p>APK INDUSTRIES uses only browser-local settings for this profile.</p>
+        <div class="privacy-box">
+          <div class="privacy-row"><strong>✓</strong><div><strong>Local preferences:</strong> Your selected options stay in this browser.</div></div>
+          <div class="privacy-row"><strong>✓</strong><div><strong>No tracking profile:</strong> This standalone page does not send profile data to a server.</div></div>
+          <div class="privacy-row"><strong>✓</strong><div><strong>Direct contact:</strong> Project inquiries open your own email application.</div></div>
+          <label class="consent"><input id="privacyAccepted" type="checkbox" checked> I accept the studio experience terms</label>
+        </div>
+      </div>
+
+      <div class="wizard-slide" data-slide="5">
+        <h1>Create your local operator profile</h1>
+        <p>This personalizes the experience. It is a browser profile, not an account.</p>
+        <div class="profile-form">
+          <label for="operatorName">Call sign / Name</label>
+          <input id="operatorName" type="text" maxlength="30" autocomplete="nickname" placeholder="e.g. ADI_COMMANDER">
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="wizard-skip" id="wizardSkip" type="button">Skip for now</button>
+      <button class="wizard-btn wizard-next" id="wizardNext" type="button">Continue</button>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Primary navigation">
+    <a class="brand" href="#top" aria-label="APK INDUSTRIES home"><div class="brand-mark">A</div><span>APK INDUSTRIES</span></a>
+    <div class="nav-links">
+      <a href="#company">Company</a>
+      <a href="#work">Work</a>
+      <a href="#services">Divisions</a>
+      <a href="#founder">Founder</a>
+    </div>
+    <div class="nav-actions">
+      <button class="icon-btn menu-toggle" id="menuToggle" type="button" aria-label="Open navigation menu" aria-expanded="false">☰</button>
+      <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch to light theme">◐</button>
+      <button class="profile-btn" id="profileButton" type="button">GUEST</button>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell hero-grid">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-dot"></span>Independent 3D &amp; AI Studio</div>
+          <h1>WE BUILD <span>FUTURE WORLDS.</span></h1>
+          <p class="hero-copy">APK INDUSTRIES is an independent creative technology company building cinematic 3D assets, automotive concepts, visual identities, AI tools and interactive digital experiences.</p>
+          <div class="hero-actions">
+            <a class="cta cta-primary" href="#work">Explore projects <span>↗</span></a>
+            <a class="cta" href="mailto:apkindustries.business@gmail.com?subject=Project%20Inquiry">Start a project</a>
+          </div>
+        </div>
+
+        <div class="showcase" aria-label="Interactive APK 3D emblem preview">
+          <div class="showcase-card">
+            <div class="showcase-bar"><span>APK / DESIGN CORE</span><span>LIVE 001</span></div>
+            <div class="model-floor"></div>
+            <div class="model-orbit"></div>
+            <div class="model-core" id="modelFallback" aria-hidden="true"></div>
+            <div class="floating-tag" id="viewerStatus" role="status" aria-live="polite">DRAG TO ORBIT · AUTO ROTATE</div>
+            <div class="viewer-controls">
+              <div class="viewer-control-group">
+                <span class="viewer-control-label">3D Object</span>
+                <div class="viewer-options" role="group" aria-label="Choose a 3D object">
+                  <button class="viewer-chip model-choice" type="button" data-model="emblem" aria-pressed="true">Emblem</button>
+                  <button class="viewer-chip model-choice" type="button" data-model="orb" aria-pressed="false">Orb</button>
+                  <button class="viewer-chip model-choice" type="button" data-model="vehicle" aria-pressed="false">Vehicle</button>
+                </div>
+              </div>
+              <div class="viewer-control-group">
+                <span class="viewer-control-label">Finish</span>
+                <div class="viewer-options" role="group" aria-label="Choose a material finish">
+                  <button class="viewer-chip material-choice" type="button" data-material="blue" aria-pressed="true">Iridescent</button>
+                  <button class="viewer-chip material-choice material-gold" type="button" data-material="gold" aria-pressed="false">Gold</button>
+                  <button class="viewer-chip material-choice material-chrome" type="button" data-material="chrome" aria-pressed="false">Chrome</button>
+                </div>
+              </div>
+              <div class="viewer-tools">
+                <button class="viewer-tool" id="autoRotate" type="button" aria-label="Pause automatic rotation" aria-pressed="true">Ⅱ</button>
+                <button class="viewer-tool" id="resetModel" type="button" aria-label="Reset model view">↺</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="company">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-kicker">The APK INDUSTRIES ecosystem</span><h2>One brand. Multiple worlds.</h2></div>
+          <p>APK INDUSTRIES is the parent company. Each division delivers a specialized creative or technology experience.</p>
+        </div>
+        <div class="services">
+          <article class="service"><span class="service-number">01</span><h3>APK 3D Studio</h3><p>Modeling, rendering, product visualization and immersive 3D artwork.</p></article>
+          <article class="service"><span class="service-number">02</span><h3>APK Customz</h3><p>Original 3D emblems, automotive graphics and custom brand assets.</p></article>
+          <article class="service"><span class="service-number">03</span><h3>APK . Cars</h3><p>Future mobility concepts, vehicle silhouettes and automotive storytelling.</p></article>
+          <article class="service"><span class="service-number">04</span><h3>APK AI &amp; Python</h3><p>Automation, creative tools and intelligent digital experiments.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="work">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-kicker">Selected work / 2026</span><h2>Built to be noticed.</h2></div>
+          <p>Select any project to explore the concept, craft and division behind it.</p>
+        </div>
+        <div class="work-grid">
+          <button class="project-card featured" type="button" data-project="customz">
+            <div class="project-art art-one"></div>
+            <h3>3D Emblem Studio</h3><p>Custom 3D emblems, hard-surface forms and premium brand-ready model assets from the APK Customz division.</p>
+            <div class="project-meta"><span>APK 3D Division</span><span class="project-arrow">↗</span></div>
+          </button>
+          <button class="project-card" type="button" data-project="identity">
+            <div class="project-art art-two"></div>
+            <h3>APK Brand Mark</h3><p>A bold dimensional identity system built for digital and physical use.</p>
+            <div class="project-meta"><span>Logo / Brand</span><span class="project-arrow">↗</span></div>
+          </button>
+          <button class="project-card" type="button" data-project="cars">
+            <div class="project-art art-three"></div>
+            <h3>APK . Cars</h3><p>Future-facing concept vehicles, automotive silhouettes and visual storytelling.</p>
+            <div class="project-meta"><span>Concept / 3D</span><span class="project-arrow">↗</span></div>
+          </button>
+          <button class="project-card featured" type="button" data-project="digital">
+            <div class="project-art" style="background:radial-gradient(circle at 30% 50%,rgba(83,211,255,.25),transparent 12rem),linear-gradient(135deg,#0d1324,#202a4a)"></div>
+            <h3>Interactive Digital Worlds</h3><p>Immersive web experiences combining visual depth, motion and purposeful interaction.</p>
+            <div class="project-meta"><span>Web / Experience</span><span class="project-arrow">↗</span></div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="services">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-kicker">Studio capabilities</span><h2>Design beyond flat.</h2></div>
+        </div>
+        <div class="services">
+          <article class="service"><span class="service-number">01</span><h3>3D Modeling</h3><p>Hard-surface models, emblems, renders and game-ready visual assets.</p></article>
+          <article class="service"><span class="service-number">02</span><h3>Logo &amp; Identity</h3><p>Distinctive visual systems designed for memorable recognition.</p></article>
+          <article class="service"><span class="service-number">03</span><h3>Automotive Concepts</h3><p>Expressive concept vehicles, silhouettes and future mobility ideas.</p></article>
+          <article class="service"><span class="service-number">04</span><h3>AI &amp; Python</h3><p>Purposeful automation tools and interactive digital experiments.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="founder">
+      <div class="shell">
+        <div class="founder">
+          <div class="founder-visual" aria-label="APK INDUSTRIES 3D brand artwork"></div>
+          <div class="founder-copy">
+            <span class="section-kicker">Founder CEO / (APK) Advay Kokate</span>
+            <blockquote>“We are not the Future, we are Growing Future.”</blockquote>
+            <p>Building original 3D work, visual identities and intelligent creative tools from scratch.</p>
+            <div><a class="cta cta-primary" href="mailto:apkindustries.business@gmail.com?subject=Project%20Inquiry">Contact the studio</a></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="shell footer-row">
+        <span>© 2026 APK INDUSTRIES. All Rights Reserved.</span>
+        <a class="cta" href="https://apkindustries.github.io/apk-industries-site/" target="_blank" rel="noopener noreferrer">Explore APK Customz <span>↗</span></a>
+        <span>@APKINDUSTRIES</span>
+      </div>
+    </footer>
+  </main>
+  <div class="project-modal" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" id="modalClose" type="button" aria-label="Close project preview">×</button>
+    <div class="modal-panel">
+      <div class="modal-art art-one" id="modalArt"></div>
+      <div class="modal-copy">
+        <span class="section-kicker" id="modalKicker">APK INDUSTRIES Project</span>
+        <h3 id="modalTitle">Project title</h3>
+        <p id="modalDescription"></p>
+        <div class="modal-meta" id="modalMeta"></div>
+        <div style="margin-top:24px">
+          <a class="cta cta-primary" href="mailto:apkindustries.business@gmail.com?subject=Project%20Inquiry">Create a project</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const onboarding = document.getElementById('onboarding');
+      let currentSlide = 1;
+      let purpose = '3D Models';
+      let scale = 'Concept / Personal';
+      let source = 'YouTube';
+      const totalSlides = 5;
+
+      function safeGet(key) {
+        try { return localStorage.getItem(key); } catch (_) { return null; }
+      }
+      function safeSet(key, value) {
+        try { localStorage.setItem(key, value); } catch (_) {}
+      }
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => toast.classList.remove('show'), 2600);
+      }
+
+      function updateWizard() {
+        document.querySelectorAll('.wizard-slide').forEach((slide, index) => {
+          slide.classList.toggle('active', index + 1 === currentSlide);
+        });
+        document.getElementById('wizardStep').textContent = `${currentSlide} / ${totalSlides}`;
+        document.getElementById('wizardProgress').style.width = `${currentSlide * 20}%`;
+        document.getElementById('wizardBack').classList.toggle('hidden', currentSlide === 1);
+        document.getElementById('wizardSkip').style.display = currentSlide === 5 ? 'inline-block' : 'none';
+        document.getElementById('wizardNext').textContent = currentSlide === 5 ? 'Enter the studio ⚡' : 'Continue';
+      }
+
+      document.querySelectorAll('[data-purpose], [data-scale], [data-source]').forEach(button => {
+        button.addEventListener('click', () => {
+          const group = button.dataset.purpose !== undefined ? '[data-purpose]' :
+            button.dataset.scale !== undefined ? '[data-scale]' : '[data-source]';
+          document.querySelectorAll(group).forEach(item => item.classList.remove('selected'));
+          button.classList.add('selected');
+          if (button.dataset.purpose) purpose = button.dataset.purpose;
+          if (button.dataset.scale) scale = button.dataset.scale;
+          if (button.dataset.source) source = button.dataset.source;
+        });
+      });
+
+      document.getElementById('wizardNext').addEventListener('click', () => {
+        if (currentSlide === 4 && !document.getElementById('privacyAccepted').checked) {
+          showToast('Please accept the studio experience terms to continue.');
+          return;
+        }
+        if (currentSlide < totalSlides) {
+          currentSlide++;
+          updateWizard();
+        } else {
+          completeWizard(false);
+        }
+      });
+      document.getElementById('wizardBack').addEventListener('click', () => {
+        if (currentSlide > 1) { currentSlide--; updateWizard(); }
+      });
+      document.getElementById('wizardSkip').addEventListener('click', () => completeWizard(true));
+
+      function completeWizard(skipped) {
+        const input = document.getElementById('operatorName');
+        const cleanName = input.value.replace(/[^\p{L}\p{N}_\-\s]/gu, '').trim().slice(0, 30);
+        const name = skipped || !cleanName ? 'GUEST' : cleanName.toUpperCase();
+        safeSet('apk_profile_v2', JSON.stringify({ name, purpose, scale, source }));
+        safeSet('apk_onboarded', 'true');
+        applyProfile();
+        onboarding.classList.add('dismissed');
+        document.body.style.overflow = '';
+      }
+
+      function applyProfile() {
+        let profile = null;
+        try { profile = JSON.parse(safeGet('apk_profile_v2') || 'null'); } catch (_) {}
+        const name = profile && /^[\p{L}\p{N}_\-\s]{1,30}$/u.test(profile.name) ? profile.name : 'GUEST';
+        document.getElementById('profileButton').textContent = name;
+      }
+
+      document.getElementById('profileButton').addEventListener('click', () => {
+        currentSlide = 1;
+        updateWizard();
+        onboarding.classList.remove('dismissed');
+        document.body.style.overflow = 'hidden';
+      });
+
+      const themeToggle = document.getElementById('themeToggle');
+      function setTheme(theme) {
+        const light = theme === 'light';
+        document.body.classList.toggle('light', light);
+        themeToggle.textContent = light ? '☾' : '◐';
+        themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+        safeSet('apk_theme', theme);
+      }
+      themeToggle.addEventListener('click', () => setTheme(document.body.classList.contains('light') ? 'dark' : 'light'));
+      setTheme(safeGet('apk_theme') === 'light' ? 'light' : 'dark');
+      applyProfile();
+
+      const menuToggle = document.getElementById('menuToggle');
+      const navLinks = document.querySelector('.nav-links');
+      menuToggle.addEventListener('click', () => {
+        const isOpen = navLinks.classList.toggle('open');
+        menuToggle.setAttribute('aria-expanded', String(isOpen));
+        menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+        menuToggle.textContent = isOpen ? '×' : '☰';
+      });
+      navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+        navLinks.classList.remove('open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+        menuToggle.setAttribute('aria-label', 'Open navigation menu');
+        menuToggle.textContent = '☰';
+      }));
+
+      const fallbackModel = document.getElementById('modelFallback');
+      let activeModel = 'emblem';
+      let activeMaterial = 'blue';
+      let autoRotate = true;
+      let replaceViewerModel = null;
+      let applyViewerMaterial = null;
+      let targetRotationX = 0;
+      let targetRotationY = 0;
+      function updateFallbackModel() {
+        fallbackModel.dataset.model = activeModel;
+        fallbackModel.dataset.material = activeMaterial;
+        document.getElementById('viewerStatus').textContent =
+          `${activeModel.toUpperCase()} · ${activeMaterial.toUpperCase()} FINISH`;
+      }
+      document.querySelectorAll('.model-choice').forEach(button => {
+        button.addEventListener('click', () => {
+          activeModel = button.dataset.model;
+          document.querySelectorAll('.model-choice').forEach(item => {
+            item.setAttribute('aria-pressed', String(item === button));
+          });
+          updateFallbackModel();
+          if (replaceViewerModel) replaceViewerModel();
+        });
+      });
+      document.querySelectorAll('.material-choice').forEach(button => {
+        button.addEventListener('click', () => {
+          activeMaterial = button.dataset.material;
+          document.querySelectorAll('.material-choice').forEach(item => {
+            item.setAttribute('aria-pressed', String(item === button));
+          });
+          updateFallbackModel();
+          if (applyViewerMaterial) applyViewerMaterial();
+        });
+      });
+      const autoRotateButton = document.getElementById('autoRotate');
+      autoRotateButton.addEventListener('click', () => {
+        autoRotate = !autoRotate;
+        autoRotateButton.setAttribute('aria-pressed', String(autoRotate));
+        autoRotateButton.setAttribute('aria-label', autoRotate ? 'Pause automatic rotation' : 'Resume automatic rotation');
+        autoRotateButton.textContent = autoRotate ? 'Ⅱ' : '▶';
+      });
+      document.getElementById('resetModel').addEventListener('click', () => {
+        targetRotationX = 0;
+        targetRotationY = 0;
+        if (replaceViewerModel) replaceViewerModel();
+      });
+      updateFallbackModel();
+
+      const projectData = {
+        customz: {
+          title:'3D Emblem Studio',
+          kicker:'APK Customz / 3D Identity',
+          description:'A dedicated showcase for custom 3D emblems, hard-surface branding assets, automotive graphics and premium model-ready designs created by the APK Customz division.',
+          art:'art-one',
+          tags:['3D Modeling','Brand Emblems','Rendering','Game-ready Assets']
+        },
+        identity: {
+          title:'APK Brand Mark',
+          kicker:'APK INDUSTRIES / Visual Identity',
+          description:'A dimensional identity system designed to stay recognizable across websites, social media, product screens and physical brand applications.',
+          art:'art-two',
+          tags:['Logo Design','Brand System','Typography','3D Identity']
+        },
+        cars: {
+          title:'APK . Cars',
+          kicker:'APK . Cars / Automotive Concepts',
+          description:'An automotive concept division exploring expressive silhouettes, future mobility forms and dramatic vehicle presentation for digital and visual projects.',
+          art:'art-three',
+          tags:['Vehicle Design','Concept Modeling','Automotive','Visualization']
+        },
+        digital: {
+          title:'Interactive Digital Worlds',
+          kicker:'APK INDUSTRIES / Web Experiences',
+          description:'Immersive web concepts built around purposeful motion, rich depth, responsive interaction and cinematic presentation without losing clarity or usability.',
+          art:'',
+          tags:['Interactive 3D','Web Design','Motion','Creative Development']
+        }
+      };
+
+      const modal = document.getElementById('projectModal');
+      const modalArt = document.getElementById('modalArt');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalKicker = document.getElementById('modalKicker');
+      const modalDescription = document.getElementById('modalDescription');
+      const modalMeta = document.getElementById('modalMeta');
+
+      function closeProjectModal() {
+        modal.classList.remove('open');
+        document.body.style.overflow = onboarding.classList.contains('dismissed') ? '' : 'hidden';
+      }
+
+      document.querySelectorAll('[data-project]').forEach(card => {
+        card.addEventListener('click', () => {
+          const project = projectData[card.dataset.project];
+          if (!project) return;
+          modalArt.className = `modal-art ${project.art}`.trim();
+          modalTitle.textContent = project.title;
+          modalKicker.textContent = project.kicker;
+          modalDescription.textContent = project.description;
+          modalMeta.replaceChildren();
+          project.tags.forEach(tag => {
+            const item = document.createElement('span');
+            item.textContent = tag;
+            modalMeta.appendChild(item);
+          });
+          modal.classList.add('open');
+          document.body.style.overflow = 'hidden';
+          document.getElementById('modalClose').focus();
+        });
+      });
+      document.getElementById('modalClose').addEventListener('click', closeProjectModal);
+      modal.addEventListener('click', event => {
+        if (event.target === modal) closeProjectModal();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) closeProjectModal();
+      });
+
+      if (safeGet('apk_onboarded') === 'true') {
+        onboarding.classList.add('dismissed');
+        document.body.style.overflow = '';
+      } else {
+        document.body.style.overflow = 'hidden';
+      }
+
+      // The DOM artwork remains available when WebGL is unavailable or reduced motion is enabled.
+      function initWorld() {
+        if (!window.THREE) {
+          document.getElementById('viewerStatus').textContent = 'CSS 3D PREVIEW · WEBGL UNAVAILABLE';
+          return;
+        }
+        const viewer = document.querySelector('.showcase-card');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(38, viewer.clientWidth / viewer.clientHeight, .1, 100);
+        camera.position.set(0, 0, 7);
+        let renderer;
+        try {
+          renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
+        } catch (error) {
+          document.getElementById('viewerStatus').textContent = 'CSS 3D PREVIEW · WEBGL UNAVAILABLE';
+          showToast('The interactive 3D preview is unavailable in this browser.');
+          return;
+        }
+        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+        renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+        renderer.domElement.className = 'model-canvas';
+        renderer.domElement.setAttribute('aria-hidden', 'true');
+        viewer.appendChild(renderer.domElement);
+        document.body.classList.add('webgl-model-ready');
+
+        scene.add(new THREE.AmbientLight(0xffffff, .7));
+        const key = new THREE.DirectionalLight(0x697eff, 2.1);
+        key.position.set(5,7,8); scene.add(key);
+        const rim = new THREE.DirectionalLight(0x53d3ff, 1.4);
+        rim.position.set(-6,-3,5); scene.add(rim);
+
+        const materialSets = {
+          blue: {
+            base: new THREE.MeshStandardMaterial({color:0x455bdb,metalness:.72,roughness:.2,emissive:0x171f68}),
+            accent: new THREE.MeshStandardMaterial({color:0x65dfff,metalness:.62,roughness:.19,emissive:0x123859}),
+            dark: new THREE.MeshStandardMaterial({color:0x202642,metalness:.68,roughness:.27}),
+            glow: new THREE.MeshStandardMaterial({color:0x9a66ff,metalness:.46,roughness:.2,emissive:0x392184}),
+            wire: new THREE.MeshStandardMaterial({color:0x65dfff,metalness:.62,roughness:.2,wireframe:true,transparent:true,opacity:.72})
+          },
+          gold: {
+            base: new THREE.MeshStandardMaterial({color:0xb98432,metalness:.86,roughness:.19,emissive:0x36230a}),
+            accent: new THREE.MeshStandardMaterial({color:0xffe6a0,metalness:.82,roughness:.15,emissive:0x60420f}),
+            dark: new THREE.MeshStandardMaterial({color:0x3e2d17,metalness:.68,roughness:.26}),
+            glow: new THREE.MeshStandardMaterial({color:0xf0be4f,metalness:.72,roughness:.18,emissive:0x573a0a}),
+            wire: new THREE.MeshStandardMaterial({color:0xffe6a0,metalness:.72,roughness:.2,wireframe:true,transparent:true,opacity:.72})
+          },
+          chrome: {
+            base: new THREE.MeshStandardMaterial({color:0x94a9bd,metalness:.92,roughness:.14}),
+            accent: new THREE.MeshStandardMaterial({color:0xe9f3ff,metalness:.9,roughness:.12}),
+            dark: new THREE.MeshStandardMaterial({color:0x344354,metalness:.82,roughness:.2}),
+            glow: new THREE.MeshStandardMaterial({color:0x72cfff,metalness:.82,roughness:.16,emissive:0x15344a}),
+            wire: new THREE.MeshStandardMaterial({color:0xe9f3ff,metalness:.82,roughness:.2,wireframe:true,transparent:true,opacity:.72})
+          }
+        };
+        let materials = materialSets[activeMaterial];
+        let currentModel = null;
+
+        function addMesh(group, geometry, role, position, rotation) {
+          const mesh = new THREE.Mesh(geometry, materials[role]);
+          mesh.userData.materialRole = role;
+          if (position) mesh.position.set(position[0], position[1], position[2]);
+          if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+          group.add(mesh);
+          return mesh;
+        }
+
+        function createEmblem() {
+          const group = new THREE.Group();
+          addMesh(group, new THREE.CylinderGeometry(1.05,1.05,.24,6,1), 'dark', [0,0,0], [Math.PI/2,0,0]);
+          addMesh(group, new THREE.CylinderGeometry(.91,.91,.16,6,1), 'base', [0,0,.15], [Math.PI/2,0,0]);
+          addMesh(group, new THREE.TorusGeometry(.78,.035,10,6), 'accent', [0,0,.25], [0,0,Math.PI/6]);
+          addMesh(group, new THREE.BoxGeometry(.2,1.05,.15), 'accent', [-.25,.04,.32], [0,0,.38]);
+          addMesh(group, new THREE.BoxGeometry(.2,1.05,.15), 'accent', [.25,.04,.32], [0,0,-.38]);
+          addMesh(group, new THREE.BoxGeometry(.62,.13,.16), 'glow', [0,-.28,.34]);
+          for (let i=0;i<6;i++) {
+            const angle=(Math.PI*2*i)/6;
+            addMesh(group, new THREE.SphereGeometry(.055,12,10), 'glow', [Math.cos(angle)*.88,Math.sin(angle)*.88,.27]);
+          }
+          return group;
+        }
+
+        function createOrb() {
+          const group = new THREE.Group();
+          addMesh(group,new THREE.SphereGeometry(.78,32,24),'base',[0,0,0]);
+          addMesh(group,new THREE.IcosahedronGeometry(.96,1),'wire',[0,0,0]);
+          addMesh(group,new THREE.TorusGeometry(1.22,.035,12,72),'glow',[0,0,0],[.7,0,.3]);
+          addMesh(group,new THREE.TorusGeometry(1.03,.024,10,72),'accent',[0,0,0],[1.1,.5,-.35]);
+          for (let i=0;i<4;i++) {
+            const angle=i*Math.PI/2;
+            addMesh(group,new THREE.SphereGeometry(.11,16,12),'glow',[Math.cos(angle)*1.22,Math.sin(angle)*1.22,0]);
+          }
+          return group;
+        }
+
+        function createVehicle() {
+          const group = new THREE.Group();
+          addMesh(group,new THREE.BoxGeometry(2.6,.38,.9),'base',[0,-.12,0]);
+          addMesh(group,new THREE.BoxGeometry(2.15,.18,1.02),'accent',[0,-.31,0]);
+          const cabinShape = new THREE.Shape();
+          cabinShape.moveTo(-.83,0); cabinShape.lineTo(.78,0); cabinShape.lineTo(.47,.58);
+          cabinShape.lineTo(-.42,.58); cabinShape.closePath();
+          addMesh(group,new THREE.ExtrudeGeometry(cabinShape,{depth:.62,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.04,bevelThickness:.04}), 'dark', [-.08,.06,-.31], [0,0,0]);
+          addMesh(group,new THREE.BoxGeometry(.2,.1,.76),'glow',[1.22,-.1,0]);
+          for (const x of [-.82,.82]) {
+            addMesh(group,new THREE.CylinderGeometry(.31,.31,.2,24),'dark',[x,-.4,.48],[0,0,Math.PI/2]);
+            addMesh(group,new THREE.CylinderGeometry(.15,.15,.22,20),'accent',[x,-.4,.48],[0,0,Math.PI/2]);
+            addMesh(group,new THREE.CylinderGeometry(.31,.31,.2,24),'dark',[x,-.4,-.48],[0,0,Math.PI/2]);
+            addMesh(group,new THREE.CylinderGeometry(.15,.15,.22,20),'accent',[x,-.4,-.48],[0,0,Math.PI/2]);
+          }
+          return group;
+        }
+
+        function buildModel() {
+          const builders = {emblem:createEmblem,orb:createOrb,vehicle:createVehicle};
+          currentModel = builders[activeModel]();
+          scene.add(currentModel);
+          fitModel();
+        }
+
+        replaceViewerModel = () => {
+          if (currentModel) {
+            scene.remove(currentModel);
+            currentModel.traverse(object => {
+              if (object.geometry) object.geometry.dispose();
+            });
+          }
+          buildModel();
+          currentModel.rotation.set(targetRotationX,targetRotationY,0);
+        };
+
+        applyViewerMaterial = () => {
+          materials = materialSets[activeMaterial];
+          if (currentModel) currentModel.traverse(object => {
+            if (!object.isMesh) return;
+            const role = object.userData.materialRole;
+            if (role && materials[role]) object.material = materials[role];
+          });
+        };
+
+        function fitModel() {
+          if (!currentModel) return;
+          const viewHeight = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const viewWidth = viewHeight * camera.aspect;
+          currentModel.scale.setScalar(Math.min(viewHeight * .48 / 2.5, viewWidth * .66 / 3.1));
+        }
+
+        buildModel();
+
+        const particles = new THREE.BufferGeometry();
+        const points = [];
+        for (let i=0;i<110;i++) points.push((Math.random()-.5)*7,(Math.random()-.5)*4.5,-1-Math.random()*2);
+        particles.setAttribute('position', new THREE.Float32BufferAttribute(points,3));
+        const particleField = new THREE.Points(particles,new THREE.PointsMaterial({color:0x8ea2ff,size:.018,transparent:true,opacity:.7}));
+        scene.add(particleField);
+
+        let dragging = false;
+        viewer.addEventListener('pointerdown', event => {
+          if (event.target.closest('.viewer-controls')) return;
+          dragging = true;
+          viewer.setPointerCapture(event.pointerId);
+          viewer.style.cursor = 'grabbing';
+        });
+        viewer.addEventListener('pointermove', event => {
+          if (!dragging || !currentModel) return;
+          targetRotationY += event.movementX * .012;
+          targetRotationX = Math.max(-.9,Math.min(.9,targetRotationX + event.movementY * .01));
+        });
+        const stopDragging = () => {
+          dragging = false;
+          viewer.style.cursor = '';
+        };
+        viewer.addEventListener('pointerup', stopDragging);
+        viewer.addEventListener('pointercancel', stopDragging);
+        viewer.addEventListener('lostpointercapture', stopDragging);
+
+        function handleResize() {
+          camera.aspect=viewer.clientWidth/viewer.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(viewer.clientWidth,viewer.clientHeight);
+          fitModel();
+        }
+        addEventListener('resize', handleResize);
+        if ('ResizeObserver' in window) {
+          new ResizeObserver(handleResize).observe(viewer);
+        }
+
+        let animationFrame = 0;
+        function animate() {
+          animationFrame = requestAnimationFrame(animate);
+          if (document.hidden) return;
+          const t=performance.now()/1000;
+          if (currentModel) {
+            if (autoRotate && !dragging) targetRotationY = Math.sin(t*.42)*.36;
+            currentModel.rotation.y += (targetRotationY-currentModel.rotation.y)*.12;
+            currentModel.rotation.x += (targetRotationX-currentModel.rotation.x)*.12;
+          }
+          particleField.rotation.y=t*.018;
+          renderer.render(scene,camera);
+        }
+        animate();
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            cancelAnimationFrame(animationFrame);
+          } else {
+            animate();
+          }
+        });
+      }
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        initWorld();
+      } else {
+        document.getElementById('viewerStatus').textContent = 'STATIC PREVIEW · REDUCED MOTION';
+      }
+
+      const progress = document.getElementById('scrollProgress');
+      let scrollPending = false;
+      addEventListener('scroll', () => {
+        if (scrollPending) return;
+        scrollPending = true;
+        requestAnimationFrame(() => {
+          const scrollable = document.documentElement.scrollHeight - innerHeight;
+          progress.style.transform = `scaleX(${scrollable > 0 ? scrollY / scrollable : 0})`;
+          scrollPending = false;
+        });
+      }, {passive:true});
+
+      const revealItems = document.querySelectorAll('.project-card, .service, .founder, .showcase');
+      if ('IntersectionObserver' in window) {
+        const revealObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, {threshold:.12});
+        revealItems.forEach(item => {
+          item.classList.add('reveal');
+          revealObserver.observe(item);
+        });
+      } else {
+        revealItems.forEach(item => item.classList.add('is-visible'));
+      }
+    })();
+  </script>
+</body>
+</html>
